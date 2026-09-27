@@ -1,6 +1,6 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Elias Bakken <elias@iagent.no>
-Date: Sun, 27 Sep 2026 17:13:43 +0200
+Date: Sun, 27 Sep 2026 19:51:24 +0200
 Subject: [PATCH] Add support for Recore
 
 Device tree and defconfig for the Iagent Recore A5-A8, an Allwinner A64
@@ -12,6 +12,13 @@ not scan it for boot devices. PD7 enables the load switch that would
 source VBUS on USB-C; the usb0-vbus regulator has neither
 regulator-always-on nor regulator-boot-on, so probing it drives PD7
 low. A7 has no pull-down on that enable input.
+
+AR100: the PREBOOT write switches the AR100 (CPUS) clock to PLL_PERIPH0
+before Linux starts. The same clock feeds AHB0/APB0 and with them the
+RSB bus to the PMIC, so Linux has to read the final rate when it sets
+the RSB divider. Changing it from Linux later overclocks RSB, and doing
+it with assigned-clock-parents in the device tree hangs the board,
+because the parent is switched before the dividers are.
 
 Boot: a USB stick in the type-A port is tried before the eMMC, so the
 board can always be reflashed from USB. If nothing boots, the video
@@ -314,7 +321,7 @@ index 00000000..096d220f
 +};
 diff --git a/configs/recore_defconfig b/configs/recore_defconfig
 new file mode 100644
-index 00000000..202904db
+index 00000000..d07d1dc1
 --- /dev/null
 +++ b/configs/recore_defconfig
 @@ -0,0 +1,38 @@
@@ -353,7 +360,7 @@ index 00000000..202904db
 +CONFIG_CMD_REGULATOR=y
 +CONFIG_SYS_CLK_FREQ=648000000
 +CONFIG_USE_PREBOOT=y
-+CONFIG_PREBOOT="usb reset; run bootcmd_usb0"
++CONFIG_PREBOOT="mw.l 0x01f01400 0x00020102; usb reset; run bootcmd_usb0"
 +CONFIG_CMD_BMP=y
 +CONFIG_BOOTCOMMAND="run distro_bootcmd; setenv stdout serial,vidconsole; echo; echo 'BOOT FAILED: nothing to boot from'; echo 'The eMMC did not answer. Connect the serial header for detail.'"
 -- 
